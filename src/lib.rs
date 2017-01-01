@@ -183,18 +183,12 @@ impl Engine {
         }
         Token::JumpForward(c) => {
           if self.buffer[self.pointer as usize] == 0 {
-            cursor = c as isize;
+            cursor = (c + 1) as isize;
           } else {
             cursor += 1;
           }
         }
-        Token::JumpBackward(c) => {
-          if self.buffer[self.pointer as usize] != 0 {
-            cursor = c as isize;
-          } else {
-            cursor += 1;
-          }
-        }
+        Token::JumpBackward(c) => cursor = c as isize,
         Token::Nop => cursor += 1,
       }
     }
