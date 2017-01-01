@@ -25,12 +25,56 @@ impl Engine {
 
     let input: Vec<char> = s.chars().filter(|&c| c != '\t' && c != '\n' && c != ' ').collect();
     let mut cursor: isize = 0;
+    let mut buffer = String::new();
     loop {
       match input[cursor as usize] {
-        '>' => self.pointer += 1,
-        '<' => self.pointer -= 1,
-        '+' => safe_inc(&mut self.buffer[self.pointer as usize]),
-        '-' => safe_dec(&mut self.buffer[self.pointer as usize]),
+        c @ '0'...'9' => {
+          buffer.push(c);
+        }
+        '>' => {
+          let cnt = if buffer != "" {
+            buffer.parse::<usize>().ok().ok_or("failed to parse integer".to_owned())?
+          } else {
+            1
+          };
+          buffer.clear();
+
+          self.pointer += cnt as isize
+        }
+        '<' => {
+          let cnt = if buffer != "" {
+            buffer.parse::<usize>().ok().ok_or("failed to parse integer".to_owned())?
+          } else {
+            1
+          };
+          buffer.clear();
+
+          self.pointer -= cnt as isize
+        }
+        '+' => {
+          let cnt = if buffer != "" {
+            buffer.parse::<usize>().ok().ok_or("failed to parse integer".to_owned())?
+          } else {
+            1
+          };
+          buffer.clear();
+
+          for _ in 0..cnt {
+            safe_inc(&mut self.buffer[self.pointer as usize])
+          }
+        }
+        '-' => {
+          let cnt = if buffer != "" {
+            buffer.parse::<usize>().ok().ok_or("failed to parse integer".to_owned())?
+          } else {
+            1
+          };
+          buffer.clear();
+
+          for _ in 0..cnt {
+            safe_dec(&mut self.buffer[self.pointer as usize])
+          }
+        }
         '.' => stdout.push(self.buffer[self.pointer as usize] as char),
         ',' => {
           let c = stdin.next().ok_or("empty stdin".to_owned())?;
@@ -77,7 +121,7 @@ impl Engine {
             continue;
           }
         }
-        c => return Err(format!("unexpected token: '{}'", c)),
+        _ => (),
       }
       cursor += 1;
       if cursor == input.len() as isize {
@@ -109,11 +153,41 @@ mod tests {
   }
 
   #[test]
+  fn test2() {
+    #[cfg_attr(rustfmt, rustfmt_skip)]
+    const SOURCE: &'static str =
+       "++>+++++[<+>-]++++++++[<++++++>-]<.";
+
+    let result = Engine::new(0, vec![0; 8096]).eval(SOURCE, "");
+    assert_eq!(result, Ok("7".to_owned()));
+  }
+
+  #[test]
+  fn test3() {
+    #[cfg_attr(rustfmt, rustfmt_skip)]
+    const SOURCE: &'static str =
+       "2+>5+[<+>-]8+[<6+>-]<.";
+
+    let result = Engine::new(0, vec![0; 8096]).eval(SOURCE, "");
+    assert_eq!(result, Ok("7".to_owned()));
+  }
+
+  #[test]
   fn hello_world() {
     #[cfg_attr(rustfmt, rustfmt_skip)]
     const HELLO_WORLD: &'static str =
       "++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.++
        +.------.--------.>>+.>++.";
+
+    let result = Engine::new(0, vec![0; 8096]).eval(HELLO_WORLD, "");
+    assert_eq!(result, Ok("Hello World!\n".to_owned()));
+  }
+
+  #[test]
+  fn hello_world2() {
+    #[cfg_attr(rustfmt, rustfmt_skip)]
+    const HELLO_WORLD: &'static str =
+      "8+[>4+[>2+>3+>3+>+4<-]>+>+>-2>+[<]<-]2>.>3-.7+..3+.2>.<-.<.3+.6-.8-.2>+.>2+.";
 
     let result = Engine::new(0, vec![0; 8096]).eval(HELLO_WORLD, "");
     assert_eq!(result, Ok("Hello World!\n".to_owned()));
@@ -127,6 +201,32 @@ mod tests {
        <<<<<<-]<++++>+++>-->+++>->>--->++>>>+++++[->++>++<<]<<<<<<<<<<[->-[>>>>>>>]>[<+
        ++>.>.>>>>..>>>+<]<<<<<-[>>>>]>[<+++++>.>.>..>>>+<]>>>>+<-[<<<]<[[-<<+>>]>>>+>+<
        <<<<<[->>+>+>-<<<<]<]>>[[-]<]>[>>>[>.<<.<<<]<[.<<<<]>]>.<<<<<<<<<<<]";
+
+    let result = Engine::new(0, vec![0; 8096]).eval(SOURCE, "");
+    assert!(result.is_ok());
+
+    for (i, r) in result.unwrap().split("\n").filter(|&s| s != "").enumerate() {
+      if (i + 1) % 15 == 0 {
+        assert_eq!(r, "FizzBuzz");
+      } else if (i + 1) % 3 == 0 {
+        assert_eq!(r, "Fizz");
+      } else if (i + 1) % 5 == 0 {
+        assert_eq!(r, "Buzz");
+      } else {
+        assert_eq!(r, format!("{}", i + 1));
+      }
+    }
+  }
+
+  #[test]
+  fn fizz_buzz2() {
+    #[cfg_attr(rustfmt, rustfmt_skip)]
+    const SOURCE:&'static str =
+      "6+[->4+2>+>+>-5<]>[<4+2>3+>4+>>3+>5+>5+6>2+2>2+14<-]
+       <4+>3+>2->3+>-2>3->2+3>5+[->2+>2+2<]10<[->-[7>]>[<3+
+       >.>.4>..3>+<]5<-[4>]>[<5+>.>.>..3>+<]4>+<-[3<]<[[-2<
+       +2>]3>+>+6<[-2>+>+>-4<]<]2>[[-]<]>[3>[>.2<.3<]<[.4<]
+       >]>.11<]";
 
     let result = Engine::new(0, vec![0; 8096]).eval(SOURCE, "");
     assert!(result.is_ok());
