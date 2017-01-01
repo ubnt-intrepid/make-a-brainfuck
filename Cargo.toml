@@ -1,6 +1,14 @@
 [package]
 name = "brainfuck"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Yusuke Sasaki <yusuke.sasaki.nuem@gmail.com>"]
+
+[lib]
+name = "brainfuck"
+path = "src/lib.rs"
+
+[[bin]]
+name = "brainfuck"
+path = "src/main.rs"
 
 [dependencies]
