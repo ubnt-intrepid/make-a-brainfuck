@@ -1,3 +1,132 @@
+#[derive(Debug,PartialEq)]
+enum Token {
+  AddVal(usize),
+  SubVal(usize),
+  AddPtr(usize),
+  SubPtr(usize),
+  PutChar,
+  GetChar,
+  JumpForward(usize),
+  JumpBackward(usize),
+  Nop,
+}
+
+fn parse_to_int(s: &mut String) -> Result<(usize, usize), String> {
+  let cnt = if s != "" {
+    s.parse::<usize>().ok().ok_or("failed to parse integer".to_owned())?
+  } else {
+    1
+  };
+  let digit = s.len();
+  s.clear();
+  Ok((cnt, digit))
+}
+
+#[test]
+fn parse_int_test() {
+  assert_eq!(parse_to_int(&mut "".to_owned()), Ok((1, 0)));
+  assert_eq!(parse_to_int(&mut "12".to_owned()), Ok((12, 2)));
+}
+
+fn parse(s: &str) -> Result<Vec<Token>, String> {
+  let inputs: Vec<char> = s.trim().chars().filter(|&c| "><+-.,[]0123456789".contains(c)).collect();
+
+  let mut result = Vec::new();
+  let mut buf_count = String::new();
+  for (i, &c) in inputs.iter().enumerate() {
+    match c {
+      c @ '0'...'9' => {
+        buf_count.push(c);
+      }
+      '>' => {
+        let (c, d) = parse_to_int(&mut buf_count)?;
+        for _ in 0..d {
+          result.push(Token::Nop);
+        }
+        result.push(Token::AddPtr(c));
+      }
+      '<' => {
+        let (c, d) = parse_to_int(&mut buf_count)?;
+        for _ in 0..d {
+          result.push(Token::Nop);
+        }
+        result.push(Token::SubPtr(c));
+      }
+      '+' => {
+        let (c, d) = parse_to_int(&mut buf_count)?;
+        for _ in 0..d {
+          result.push(Token::Nop);
+        }
+        result.push(Token::AddVal(c));
+      }
+      '-' => {
+        let (c, d) = parse_to_int(&mut buf_count)?;
+        for _ in 0..d {
+          result.push(Token::Nop);
+        }
+        result.push(Token::SubVal(c));
+      }
+      '.' => result.push(Token::PutChar),
+      ',' => result.push(Token::GetChar),
+      '[' => {
+        let mut nest = 1;
+        let cursor = ((i + 1)..(inputs.len())).find(|&j| {
+            match inputs[j as usize] {
+              '[' => {
+                nest += 1;
+                false
+              }
+              ']' => {
+                nest -= 1;
+                nest == 0
+              }
+              _ => false,
+            }
+          })
+          .ok_or("correspond ']' is missing.".to_owned())?;
+        result.push(Token::JumpForward(cursor));
+      }
+      ']' => {
+        let mut nest = 1;
+        let cursor = (0..i).rev()
+          .find(|&j| {
+            match inputs[j as usize] {
+              '[' => {
+                nest -= 1;
+                nest == 0
+              }
+              ']' => {
+                nest += 1;
+                false
+              }
+              _ => false,
+            }
+          })
+          .ok_or("correspond '[' is missing.".to_owned())?;
+        result.push(Token::JumpBackward(cursor));
+      }
+      _ => unreachable!(),
+    }
+  }
+
+  Ok(result)
+}
+
+#[test]
+fn case1() {
+  let s = "[>,.2<]";
+  let tokens = parse(s);
+  assert_eq!(tokens,
+             Ok(vec![Token::JumpForward(6),
+                     Token::AddPtr(1),
+                     Token::GetChar,
+                     Token::PutChar,
+                     Token::Nop,
+                     Token::SubPtr(2),
+                     Token::JumpBackward(0)]));
+}
+
+
 #[derive(Debug)]
 pub struct Engine {
   pointer: isize,
@@ -19,113 +148,54 @@ impl Engine {
   }
 
   pub fn eval(&mut self, s: &str, stdin: &str) -> Result<String, String> {
+    let mut stdin = stdin.chars();
     let mut stdout = String::new();
 
-    let mut stdin = stdin.chars();
+    let tokens = parse(s)?;
 
-    let input: Vec<char> = s.chars().filter(|&c| c != '\t' && c != '\n' && c != ' ').collect();
     let mut cursor: isize = 0;
-    let mut buffer = String::new();
-    loop {
-      match input[cursor as usize] {
-        c @ '0'...'9' => {
-          buffer.push(c);
+    while let Some(token) = tokens.get(cursor as usize) {
+      match *token {
+        Token::AddPtr(n) => {
+          self.pointer += n as isize;
+          cursor += 1;
         }
-        '>' => {
-          let cnt = if buffer != "" {
-            buffer.parse::<usize>().ok().ok_or("failed to parse integer".to_owned())?
-          } else {
-            1
-          };
-          buffer.clear();
-
-          self.pointer += cnt as isize
+        Token::SubPtr(n) => {
+          self.pointer -= n as isize;
+          cursor += 1;
         }
-        '<' => {
-          let cnt = if buffer != "" {
-            buffer.parse::<usize>().ok().ok_or("failed to parse integer".to_owned())?
-          } else {
-            1
-          };
-          buffer.clear();
-
-          self.pointer -= cnt as isize
+        Token::AddVal(n) => {
+          safe_add(&mut self.buffer[self.pointer as usize], n);
+          cursor += 1;
         }
-        '+' => {
-          let cnt = if buffer != "" {
-            buffer.parse::<usize>().ok().ok_or("failed to parse integer".to_owned())?
-          } else {
-            1
-          };
-          buffer.clear();
-
-          for _ in 0..cnt {
-            safe_inc(&mut self.buffer[self.pointer as usize])
-          }
+        Token::SubVal(n) => {
+          safe_sub(&mut self.buffer[self.pointer as usize], n);
+          cursor += 1;
         }
-        '-' => {
-          let cnt = if buffer != "" {
-            buffer.parse::<usize>().ok().ok_or("failed to parse integer".to_owned())?
-          } else {
-            1
-          };
-          buffer.clear();
-
-          for _ in 0..cnt {
-            safe_dec(&mut self.buffer[self.pointer as usize])
-          }
+        Token::PutChar => {
+          stdout.push(self.buffer[self.pointer as usize] as char);
+          cursor += 1;
         }
-        '.' => stdout.push(self.buffer[self.pointer as usize] as char),
-        ',' => {
+        Token::GetChar => {
           let c = stdin.next().ok_or("empty stdin".to_owned())?;
           self.buffer[self.pointer as usize] = c as u8;
+          cursor += 1;
         }
-        '[' => {
+        Token::JumpForward(c) => {
           if self.buffer[self.pointer as usize] == 0 {
-            let mut nest = 1;
-            cursor = ((cursor + 1)..(input.len() as isize)).find(|&j| {
-                match input[j as usize] {
-                  '[' => {
-                    nest += 1;
-                    false
-                  }
-                  ']' => {
-                    nest -= 1;
-                    nest == 0
-                  }
-                  _ => false,
-                }
-              })
-              .ok_or("correspond ']' is missing.".to_owned())?;
-            continue;
+            cursor = c as isize;
+          } else {
+            cursor += 1;
           }
         }
-        ']' => {
+        Token::JumpBackward(c) => {
           if self.buffer[self.pointer as usize] != 0 {
-            let mut nest = 1;
-            cursor = (0..(cursor as isize)).rev()
-              .find(|&j| {
-                match input[j as usize] {
-                  '[' => {
-                    nest -= 1;
-                    nest == 0
-                  }
-                  ']' => {
-                    nest += 1;
-                    false
-                  }
-                  _ => false,
-                }
-              })
-              .ok_or("correspond '[' is missing.".to_owned())?;
-            continue;
+            cursor = c as isize;
+          } else {
+            cursor += 1;
           }
         }
-        _ => (),
-      }
-      cursor += 1;
-      if cursor == input.len() as isize {
-        break;
+        Token::Nop => cursor += 1,
       }
     }
     Ok(stdout)
@@ -133,12 +203,16 @@ impl Engine {
 }
 
 
-fn safe_inc(val: &mut u8) {
-  if *val == 255 { *val = 0 } else { *val += 1 }
+fn safe_add(val: &mut u8, n: usize) {
+  for _ in 0..n {
+    if *val == 255 { *val = 0 } else { *val += 1 }
+  }
 }
 
-fn safe_dec(val: &mut u8) {
-  if *val == 0 { *val = 255 } else { *val -= 1 }
+fn safe_sub(val: &mut u8, n: usize) {
+  for _ in 0..n {
+    if *val == 0 { *val = 255 } else { *val -= 1 }
+  }
 }
 
 
