@@ -1,4 +1,5 @@
 extern crate brainfuck;
+use brainfuck::Engine;
 
 fn main() {
   #[cfg_attr(rustfmt, rustfmt_skip)]
@@ -7,7 +8,7 @@ fn main() {
      >>+[<]<-]>  >.>---.+++  ++++..+++.  >>.<-.<.++
      +.------.-  -------.>>  +.>++.";
 
-  let mut engine = brainfuck::Engine::new(0, vec![0;8096]);
+  let mut engine = Engine::default();
   match engine.eval(HELLO_WORLD, "") {
     Ok(stdout) => println!("Success:\n\"{}\"", stdout),
     Err(err) => println!("Failure: {}", err),
