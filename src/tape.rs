@@ -28,12 +28,12 @@ impl Tape {
     safe_sub(&mut self.buffer[self.pointer], n);
   }
 
-  pub fn get(&self) -> u8 {
+  pub fn get_char(&self) -> u8 {
     self.buffer[self.pointer]
   }
 
-  pub fn get_mut(&mut self) -> &mut u8 {
-    &mut self.buffer[self.pointer]
+  pub fn put_char(&mut self, c: u8) {
+    self.buffer[self.pointer] = c;
   }
 }
 

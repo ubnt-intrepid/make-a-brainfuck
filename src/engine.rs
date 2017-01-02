@@ -1,60 +1,85 @@
-use std::str::Chars;
+use std::io::Cursor;
+use std::io::Read;
 use parser;
 use tape::Tape;
 
 #[derive(Debug,Default)]
-pub struct Engine {
+pub struct Engine<'i, 'o> {
   tape: Tape,
+  stdin: Option<Cursor<&'i [u8]>>,
+  stdout: Option<&'o mut Vec<u8>>,
 }
 
-impl Engine {
-  pub fn new(tape: Tape) -> Engine {
-    Engine { tape: tape }
+impl<'i, 'o> Engine<'i, 'o> {
+  pub fn new(tape: Tape) -> Self {
+    Engine {
+      tape: tape,
+      stdin: None,
+      stdout: None,
+    }
   }
 
-  pub fn eval(&mut self, s: &str, stdin: &str) -> Result<String, String> {
-    let mut stdin = stdin.chars();
-    let mut stdout = String::new();
-    let tokens = parser::parse(s)?;
-
-    self.eval_lines(&tokens, &mut stdin, &mut stdout)?;
-
-    Ok(stdout)
+  pub fn stdin(mut self, stdin: &'i [u8]) -> Self {
+    self.stdin = Some(Cursor::new(stdin));
+    self
   }
 
-  fn eval_lines(&mut self,
-                tokens: &[parser::Ast],
-                stdin: &mut Chars,
-                stdout: &mut String)
-                -> Result<(), String> {
+  pub fn stdout(mut self, stdout: &'o mut Vec<u8>) -> Self {
+    self.stdout = Some(stdout);
+    self
+  }
+
+  pub fn eval(&mut self, s: &str) -> Result<(), String> {
+    self.eval_lines(&parser::parse(s)?)
+  }
+
+  fn eval_lines(&mut self, tokens: &[parser::Ast]) -> Result<(), String> {
     for token in tokens {
-      self.eval_token(token, stdin, stdout)?;
+      self.eval_token(token)?;
     }
     Ok(())
   }
 
-  fn eval_token(&mut self,
-                token: &parser::Ast,
-                stdin: &mut Chars,
-                stdout: &mut String)
-                -> Result<(), String> {
+  fn eval_token(&mut self, token: &parser::Ast) -> Result<(), String> {
     use parser::Ast;
     match *token {
-      Ast::AddPtr(n) => self.tape.add_ptr(n),
-      Ast::SubPtr(n) => self.tape.sub_ptr(n),
-      Ast::AddVal(n) => self.tape.add_val(n),
-      Ast::SubVal(n) => self.tape.sub_val(n),
-      Ast::PutChar => stdout.push(self.tape.get() as char),
+      Ast::AddPtr(n) => Ok(self.tape.add_ptr(n)),
+      Ast::SubPtr(n) => Ok(self.tape.sub_ptr(n)),
+      Ast::AddVal(n) => Ok(self.tape.add_val(n)),
+      Ast::SubVal(n) => Ok(self.tape.sub_val(n)),
+      Ast::PutChar => {
+        let c = self.tape.get_char();
+        self.put_char(c)?;
+        Ok(())
+      }
       Ast::GetChar => {
-        let c = stdin.next().ok_or("empty stdin".to_owned())?;
-        *self.tape.get_mut() = c as u8;
+        let c = self.get_char()?;
+        self.tape.put_char(c);
+        Ok(())
       }
       Ast::Loop(ref ast) => {
-        while self.tape.get() != 0 {
-          self.eval_lines(&ast, stdin, stdout)?;
+        while self.tape.get_char() != 0 {
+          self.eval_lines(&ast)?;
         }
+        Ok(())
       }
     }
+  }
+
+  fn put_char(&mut self, c: u8) -> Result<(), String> {
+    if let Some(ref mut stdout) = self.stdout {
+      stdout.push(c)
+    }
     Ok(())
+  }
+
+  fn get_char(&mut self) -> Result<u8, String> {
+    if let Some(ref mut stdin) = self.stdin {
+      let mut buf = [0u8];
+      stdin.read_exact(&mut buf).map_err(|e| e.to_string())?;
+      Ok(buf[0])
+    } else {
+      Err("empty stdin".to_owned())
+    }
   }
 }
