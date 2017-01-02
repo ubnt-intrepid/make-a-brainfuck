@@ -12,4 +12,11 @@ fn main() {
     Ok(stdout) => println!("Success:\n\"{}\"", stdout),
     Err(err) => println!("Failure: {}", err),
   }
+
+
+  let s = "++>+++++[<+>-]++++++++[<++++++>-]<.";
+  let result = brainfuck::parser::parse(s);
+  for ref p in result.as_ref().unwrap() {
+    println!("{:?}", p);
+  }
 }

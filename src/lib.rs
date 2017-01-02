@@ -1,4 +1,6 @@
-mod parser;
+pub mod parser;
+
+use std::str::Chars;
 
 #[derive(Debug)]
 pub struct Engine {
@@ -21,53 +23,49 @@ impl Engine {
   }
 
   pub fn eval(&mut self, s: &str, stdin: &str) -> Result<String, String> {
-    use parser::Token;
-
     let mut stdin = stdin.chars();
     let mut stdout = String::new();
-
     let tokens = parser::parse(s)?;
 
-    let mut cursor: isize = 0;
-    while let Some(token) = tokens.get(cursor as usize) {
-      match *token {
-        Token::AddPtr(n) => {
-          self.pointer += n as isize;
-          cursor += 1;
+    self.eval_lines(&tokens, &mut stdin, &mut stdout)?;
+
+    Ok(stdout)
+  }
+
+  fn eval_lines(&mut self,
+                tokens: &[parser::Ast],
+                stdin: &mut Chars,
+                stdout: &mut String)
+                -> Result<(), String> {
+    for token in tokens {
+      self.eval_token(token, stdin, stdout)?;
+    }
+    Ok(())
+  }
+
+  fn eval_token(&mut self,
+                token: &parser::Ast,
+                stdin: &mut Chars,
+                stdout: &mut String)
+                -> Result<(), String> {
+    use parser::Ast;
+    match *token {
+      Ast::AddPtr(n) => self.pointer += n as isize,
+      Ast::SubPtr(n) => self.pointer -= n as isize,
+      Ast::AddVal(n) => safe_add(&mut self.buffer[self.pointer as usize], n),
+      Ast::SubVal(n) => safe_sub(&mut self.buffer[self.pointer as usize], n),
+      Ast::PutChar => stdout.push(self.buffer[self.pointer as usize] as char),
+      Ast::GetChar => {
+        let c = stdin.next().ok_or("empty stdin".to_owned())?;
+        self.buffer[self.pointer as usize] = c as u8;
+      }
+      Ast::Loop(ref ast) => {
+        while self.buffer[self.pointer as usize] != 0 {
+          self.eval_lines(&ast, stdin, stdout)?;
         }
-        Token::SubPtr(n) => {
-          self.pointer -= n as isize;
-          cursor += 1;
-        }
-        Token::AddVal(n) => {
-          safe_add(&mut self.buffer[self.pointer as usize], n);
-          cursor += 1;
-        }
-        Token::SubVal(n) => {
-          safe_sub(&mut self.buffer[self.pointer as usize], n);
-          cursor += 1;
-        }
-        Token::PutChar => {
-          stdout.push(self.buffer[self.pointer as usize] as char);
-          cursor += 1;
-        }
-        Token::GetChar => {
-          let c = stdin.next().ok_or("empty stdin".to_owned())?;
-          self.buffer[self.pointer as usize] = c as u8;
-          cursor += 1;
-        }
-        Token::JumpForward(c) => {
-          if self.buffer[self.pointer as usize] == 0 {
-            cursor = (c + 1) as isize;
-          } else {
-            cursor += 1;
-          }
-        }
-        Token::JumpBackward(c) => cursor = c as isize,
-        Token::Nop => cursor += 1,
       }
     }
-    Ok(stdout)
+    Ok(())
   }
 }
 
