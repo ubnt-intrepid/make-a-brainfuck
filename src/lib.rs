@@ -4,7 +4,7 @@ use std::str::Chars;
 
 #[derive(Debug)]
 pub struct Engine {
-  pointer: isize,
+  pointer: usize,
   buffer: Vec<u8>,
 }
 
@@ -15,7 +15,7 @@ impl Default for Engine {
 }
 
 impl Engine {
-  pub fn new(pointer: isize, buffer: Vec<u8>) -> Engine {
+  pub fn new(pointer: usize, buffer: Vec<u8>) -> Engine {
     Engine {
       pointer: pointer,
       buffer: buffer,
@@ -50,17 +50,17 @@ impl Engine {
                 -> Result<(), String> {
     use parser::Ast;
     match *token {
-      Ast::AddPtr(n) => self.pointer += n as isize,
-      Ast::SubPtr(n) => self.pointer -= n as isize,
-      Ast::AddVal(n) => safe_add(&mut self.buffer[self.pointer as usize], n),
-      Ast::SubVal(n) => safe_sub(&mut self.buffer[self.pointer as usize], n),
-      Ast::PutChar => stdout.push(self.buffer[self.pointer as usize] as char),
+      Ast::AddPtr(n) => self.pointer = self.pointer.wrapping_add(n),
+      Ast::SubPtr(n) => self.pointer = self.pointer.wrapping_sub(n),
+      Ast::AddVal(n) => safe_add(&mut self.buffer[self.pointer], n),
+      Ast::SubVal(n) => safe_sub(&mut self.buffer[self.pointer], n),
+      Ast::PutChar => stdout.push(self.buffer[self.pointer] as char),
       Ast::GetChar => {
         let c = stdin.next().ok_or("empty stdin".to_owned())?;
-        self.buffer[self.pointer as usize] = c as u8;
+        self.buffer[self.pointer] = c as u8;
       }
       Ast::Loop(ref ast) => {
-        while self.buffer[self.pointer as usize] != 0 {
+        while self.buffer[self.pointer] != 0 {
           self.eval_lines(&ast, stdin, stdout)?;
         }
       }
@@ -71,15 +71,11 @@ impl Engine {
 
 
 fn safe_add(val: &mut u8, n: usize) {
-  for _ in 0..n {
-    if *val == 255 { *val = 0 } else { *val += 1 }
-  }
+  *val = (*val as usize).wrapping_add(n) as u8;
 }
 
 fn safe_sub(val: &mut u8, n: usize) {
-  for _ in 0..n {
-    if *val == 0 { *val = 255 } else { *val -= 1 }
-  }
+  *val = (*val as usize).wrapping_sub(n) as u8;
 }
 
 
