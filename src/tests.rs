@@ -14,9 +14,27 @@ fn test1() {
 
 #[test]
 fn test2() {
-    #[cfg_attr(rustfmt, rustfmt_skip)]
-  const SOURCE: &'static str =
-       "++>+++++[<+>-]++++++++[<++++++>-]<.";
+  #[cfg_attr(rustfmt, rustfmt_skip)]
+  const SOURCE: &'static str = r#"
+  ++            # v[0] += 2
+  >+++++        # v[1] += 5
+                #
+                # (v[ptr] += v[ptr+1], v[ptr+1]=0, ptr++)
+  [             # while v[1] != 0 {
+    <+          #   v[0] += 1
+    >-          #   v[1] -= 1
+  ]             # }
+                #
+  ++++++++      # v[1] += 8
+                #
+                # (v[ptr] += 6 * v[ptr+1] : ptr=0)
+  [             # while v[1] != 0 {
+    <++++++     #   v[0] += 6
+    >-          #   v[1] -= 1
+  ]             # }
+                #
+  <.            # putchar(v[0])
+  "#;
 
   let mut stdout = Vec::new();
   assert!(Engine::default().stdout(&mut stdout).eval(SOURCE).is_ok());
@@ -25,9 +43,15 @@ fn test2() {
 
 #[test]
 fn test3() {
-    #[cfg_attr(rustfmt, rustfmt_skip)]
-  const SOURCE: &'static str =
-       "2+>5+[<+>-]8+[<6+>-]<.";
+  #[cfg_attr(rustfmt, rustfmt_skip)]
+  const SOURCE: &'static str = r#"
+  2+        # v[0] += 2;
+  >5+       # v[1] += 5;
+  [<+>-]<   # v[0] += v[1]; v[1] = 0;
+  >8+       # v[1] += 8;
+  [<6+>-]<  # v[0] += 6*v[1]; v[1] = 0;
+  .         # put(v[0]);
+  "#;
 
   let mut stdout = Vec::new();
   assert!(Engine::default().stdout(&mut stdout).eval(SOURCE).is_ok());
@@ -48,12 +72,42 @@ fn hello_world() {
 
 #[test]
 fn hello_world2() {
-    #[cfg_attr(rustfmt, rustfmt_skip)]
-  const HELLO_WORLD: &'static str =
-      "8+[>4+[>2+>3+>3+>+4<-]>+>+>-2>+[<]<-]2>.>3-.7+..3+.2>.<-.<.3+.6-.8-.2>+.>2+.";
+  #[cfg_attr(rustfmt, rustfmt_skip)]
+  const SOURCE: &'static str = r#"
+  8+                    # v[0] += 8;
+  [                     # while v[ptr] != 0 {
+    >4+                 #   v[++ptr] += 4;
+    [                   #   while v[ptr] != 0 {
+      >2+               #     v[++ptr] += 2;
+      >3+               #     v[++ptr] += 3;
+      >3+               #     v[++ptr] += 3;
+      >+                #     v[++ptr] += 1;
+      4<-               #     ptr -= 4; v[ptr] -= 1;
+    ]                   #   }
+    >+                  #   v[++ptr] += 1;
+    >+                  #   v[++ptr] += 1;
+    >-                  #   v[++ptr] -= 1;
+    2>+                 #   ptr += 2; v[ptr] += 1;
+    [<]                 #   while v[ptr] != 0 { ptr--; }
+    <-                  #   v[--ptr] -= 1;
+  ]                     # }
+                        # // ptr = ??; v = [??];
+  2>.                   # ptr += 2; putchar(v[ptr]);                    // 'H'
+  >3-.                  # ++ptr; v[ptr] -= 3; putchar(v[ptr]);          // 'e'
+  7+..                  # v[ptr] += 7; putchar(v[ptr]); putchar(v[ptr]) // 'l', 'l'
+  3+.                   # v[ptr] += 3; putchar(v[ptr]);                 // 'o'
+  2>.                   # ptr += 2; putchar(v[ptr]);                    // ' '
+  <-.                   # --ptr; v[ptr] -= 1; putchar(v[ptr]);          // 'W'
+  <.                    # --ptr; putchar(v[ptr]);                       // 'o'
+  3+.                   # v[ptr] += 3; putchar(v[ptr]);                 // 'r'
+  6-.                   # v[ptr] -= 6; putchar(v[ptr]);                 // 'l'
+  8-.                   # v[ptr] -= 8; putchar(v[ptr]);                 // 'd'
+  2>+.                  # ptr += 2; v[ptr] += 1; putchar(v[ptr]);       // '!'
+  >2+.                  # ptr++; v[ptr] += 2; putchar(v[ptr]);          // '\n'
+  "#;
 
   let mut stdout = Vec::new();
-  assert!(Engine::default().stdout(&mut stdout).eval(HELLO_WORLD).is_ok());
+  assert!(Engine::default().stdout(&mut stdout).eval(SOURCE).is_ok());
   assert_eq!(stdout, "Hello World!\n".as_bytes());
 }
 

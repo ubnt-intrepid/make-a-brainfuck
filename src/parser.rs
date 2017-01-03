@@ -1,4 +1,6 @@
 mod phase1 {
+  use regex::Regex;
+
   #[derive(Debug,PartialEq)]
   pub enum Token {
     AddVal(usize),
@@ -31,7 +33,13 @@ mod phase1 {
     let mut result = Vec::new();
     let mut buf_count = String::new();
 
-    let inputs = s.trim().chars().filter(|&c| "><+-.,[]0123456789".contains(c));
+    let remove_comments = Regex::new(r"#(?:.*)$").unwrap();
+    let inputs = s.trim()
+      .split("\n")
+      .map(|line| remove_comments.replace(line, ""))
+      .flat_map(|s| s.chars().collect::<Vec<_>>())
+      .filter(|&c| "><+-.,[]0123456789".contains(c));
+
     for c in inputs {
       match c {
         c @ '0'...'9' => buf_count.push(c),
@@ -52,7 +60,9 @@ mod phase1 {
 
   #[test]
   fn case1() {
-    let inputs = "[>,.2<]";
+    let inputs = r#"[>,.2<] # hoge
+    # a.b.c
+    "#;
     let tokens = tokenize(inputs);
     assert_eq!(tokens,
                Ok(vec![Token::JumpForward,
