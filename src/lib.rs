@@ -1,5 +1,3 @@
-extern crate regex;
-
 mod parser;
 mod tape;
 mod engine;

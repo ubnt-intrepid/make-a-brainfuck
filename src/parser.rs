@@ -1,6 +1,3 @@
-use regex::Regex;
-
-
 #[derive(Debug, PartialEq)]
 pub enum Ast {
   AddVal(isize),
@@ -18,11 +15,13 @@ enum Token {
 }
 
 fn tokenize(s: &str) -> Result<Vec<Token>, String> {
-  let remove_comments = Regex::new(r"#(?:.*)$").unwrap();
-  let inputs = s.trim()
-    .split("\n")
-    .map(|line| remove_comments.replace(line, ""))
-    .flat_map(|s| s.chars().collect::<Vec<_>>());
+  let inputs = s.split("\n")
+    .map(|line| if let Some(pos) = line.find('#') {
+      &line[0..pos]
+    } else {
+      line
+    })
+    .flat_map(|s| s.chars());
 
   let mut result = Vec::new();
   let mut buf_count = String::new();
@@ -50,8 +49,8 @@ fn tokenize(s: &str) -> Result<Vec<Token>, String> {
 fn build_ast(tokens: &[Token]) -> Result<Vec<Ast>, String> {
   let mut result = Vec::new();
   let mut index = 0;
-  while let Some(ref t) = tokens.get(index) {
-    match **t {
+  while let Some(t) = tokens.get(index) {
+    match *t {
       Token::SymWithOffset('+', n) => result.push(Ast::AddVal(n)),
       Token::SymWithOffset('-', n) => result.push(Ast::AddVal(-n)),
       Token::SymWithOffset('>', n) => result.push(Ast::AddPtr(n)),
