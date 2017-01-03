@@ -59,19 +59,19 @@ impl Tape {
 }
 
 
-#[derive(Debug,Default)]
-pub struct Interpreter<'i, 'o> {
+#[derive(Debug, Default)]
+pub struct Interpreter<'i> {
   tape: Tape,
   stdin: Option<Cursor<&'i [u8]>>,
-  stdout: Option<&'o mut Vec<u8>>,
+  stdout: Vec<u8>,
 }
 
-impl<'i, 'o> Interpreter<'i, 'o> {
+impl<'i> Interpreter<'i> {
   pub fn new(pointer: usize, buffer: Vec<u8>) -> Self {
     Interpreter {
       tape: Tape::new(pointer, buffer),
       stdin: None,
-      stdout: None,
+      stdout: Vec::new(),
     }
   }
 
@@ -80,9 +80,8 @@ impl<'i, 'o> Interpreter<'i, 'o> {
     self
   }
 
-  pub fn stdout(mut self, stdout: &'o mut Vec<u8>) -> Self {
-    self.stdout = Some(stdout);
-    self
+  pub fn stdout(&self) -> &[u8] {
+    self.stdout.as_slice()
   }
 
   pub fn eval(&mut self, s: &str) -> Result<(), String> {
@@ -125,9 +124,7 @@ impl<'i, 'o> Interpreter<'i, 'o> {
   }
 
   fn put_char(&mut self, c: u8) -> Result<(), String> {
-    if let Some(ref mut stdout) = self.stdout {
-      stdout.push(c)
-    }
+    self.stdout.push(c);
     Ok(())
   }
 

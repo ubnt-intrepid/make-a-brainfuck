@@ -2,12 +2,9 @@ use interpreter::Interpreter;
 
 #[test]
 fn test1() {
-  let mut stdout = Vec::new();
-  assert!(Interpreter::new(0, vec![72, 111, 103, 101, 10, 70, 111, 111, 0])
-    .stdout(&mut stdout)
-    .eval("[.>]")
-    .is_ok());
-  assert_eq!(stdout, "Hoge\nFoo".as_bytes());
+  let mut i = Interpreter::new(0, vec![72, 111, 103, 101, 10, 70, 111, 111, 0]);
+  assert!(i.eval("[.>]").is_ok());
+  assert_eq!(i.stdout(), "Hoge\nFoo".as_bytes());
 }
 
 #[test]
@@ -34,9 +31,9 @@ fn test2() {
   <.            # putchar(v[0])
   "#;
 
-  let mut stdout = Vec::new();
-  assert!(Interpreter::default().stdout(&mut stdout).eval(SOURCE).is_ok());
-  assert_eq!(stdout, "7".as_bytes());
+  let mut i = Interpreter::default();
+  assert!(i.eval(SOURCE).is_ok());
+  assert_eq!(i.stdout(), "7".as_bytes());
 }
 
 #[test]
@@ -51,9 +48,9 @@ fn test3() {
   .         # put(v[0]);
   "#;
 
-  let mut stdout = Vec::new();
-  assert!(Interpreter::default().stdout(&mut stdout).eval(SOURCE).is_ok());
-  assert_eq!(stdout, "7".as_bytes());
+  let mut i = Interpreter::default();
+  assert!(i.eval(SOURCE).is_ok());
+  assert_eq!(i.stdout(), "7".as_bytes());
 }
 
 #[test]
@@ -63,9 +60,9 @@ fn hello_world() {
       "++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.++
        +.------.--------.>>+.>++.";
 
-  let mut stdout = Vec::new();
-  assert!(Interpreter::default().stdout(&mut stdout).eval(SOURCE).is_ok());
-  assert_eq!(stdout, "Hello World!\n".as_bytes());
+  let mut i = Interpreter::default();
+  assert!(i.eval(SOURCE).is_ok());
+  assert_eq!(i.stdout(), "Hello World!\n".as_bytes());
 }
 
 #[test]
@@ -97,49 +94,23 @@ fn hello_world2() {
   >2+.                  # v[6] += 2; putchar(v[6]);
   "#;
 
-  let mut stdout = Vec::new();
-  assert!(Interpreter::default().stdout(&mut stdout).eval(SOURCE).is_ok());
-  assert_eq!(stdout, "Hello World!\n".as_bytes());
+  let mut i = Interpreter::default();
+  assert!(i.eval(SOURCE).is_ok());
+  assert_eq!(i.stdout(), "Hello World!\n".as_bytes());
 }
 
 #[test]
 fn fizz_buzz() {
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+  #[cfg_attr(rustfmt, rustfmt_skip)]
   const SOURCE:&'static str =
-      "++++++[->++++>>+>+>-<<<<<]>[<++++>>+++>++++>>+++>+++++>+++++>>>>>>++>>++<<<<<<<<
-       <<<<<<-]<++++>+++>-->+++>->>--->++>>>+++++[->++>++<<]<<<<<<<<<<[->-[>>>>>>>]>[<+
-       ++>.>.>>>>..>>>+<]<<<<<-[>>>>]>[<+++++>.>.>..>>>+<]>>>>+<-[<<<]<[[-<<+>>]>>>+>+<
-       <<<<<[->>+>+>-<<<<]<]>>[[-]<]>[>>>[>.<<.<<<]<[.<<<<]>]>.<<<<<<<<<<<]";
+    "++++++[->++++>>+>+>-<<<<<]>[<++++>>+++>++++>>+++>+++++>+++++>>>>>>++>>++<<<<<<<<
+     <<<<<<-]<++++>+++>-->+++>->>--->++>>>+++++[->++>++<<]<<<<<<<<<<[->-[>>>>>>>]>[<+
+     ++>.>.>>>>..>>>+<]<<<<<-[>>>>]>[<+++++>.>.>..>>>+<]>>>>+<-[<<<]<[[-<<+>>]>>>+>+<
+     <<<<<[->>+>+>-<<<<]<]>>[[-]<]>[>>>[>.<<.<<<]<[.<<<<]>]>.<<<<<<<<<<<]";
 
-  let mut stdout = Vec::new();
-  assert!(Interpreter::default().stdout(&mut stdout).eval(SOURCE).is_ok());
-  for (i, r) in String::from_utf8_lossy(&stdout[..(stdout.len() - 1)])
-    .split("\n")
-    .enumerate() {
-    if (i + 1) % 15 == 0 {
-      assert_eq!(r, "FizzBuzz");
-    } else if (i + 1) % 3 == 0 {
-      assert_eq!(r, "Fizz");
-    } else if (i + 1) % 5 == 0 {
-      assert_eq!(r, "Buzz");
-    } else {
-      assert_eq!(r, format!("{}", i + 1));
-    }
-  }
-}
-
-#[test]
-fn fizz_buzz2() {
-    #[cfg_attr(rustfmt, rustfmt_skip)]
-  const SOURCE:&'static str =
-      "6+[->4+2>+>+>-5<]>[<4+2>3+>4+>>3+>5+>5+6>2+2>2+14<-]
-       <4+>3+>2->3+>-2>3->2+3>5+[->2+>2+2<]10<[->-[7>]>[<3+
-       >.>.4>..3>+<]5<-[4>]>[<5+>.>.>..3>+<]4>+<-[3<]<[[-2<
-       +2>]3>+>+6<[-2>+>+>-4<]<]2>[[-]<]>[3>[>.2<.3<]<[.4<]
-       >]>.11<]";
-
-  let mut stdout = Vec::new();
-  assert!(Interpreter::default().stdout(&mut stdout).eval(SOURCE).is_ok());
+  let mut i = Interpreter::default();
+  assert!(i.eval(SOURCE).is_ok());
+  let stdout = i.stdout();
   for (i, r) in String::from_utf8_lossy(&stdout[..(stdout.len() - 1)])
     .split("\n")
     .enumerate() {
@@ -165,9 +136,8 @@ fn primes() {
        ++.++++.<.>---.-----.<.>+++++.+.<.>.>++[<--->-]<.<.>>++[<+++>-]<.----.<.>++++.++
        .<.>-.-----.<.>+++++.+.<.>.--.";
 
-  let mut stdout = Vec::new();
-  assert!(Interpreter::default().stdout(&mut stdout).eval(SOURCE).is_ok());
-
-  assert_eq!(stdout,
+  let mut i = Interpreter::default();
+  assert!(i.eval(SOURCE).is_ok());
+  assert_eq!(i.stdout(),
              "2 3 5 7 11 13 17 19 23 29 31 37 41 32 36 42 48 50 56 60 62 68 72 78 86".as_bytes());
 }

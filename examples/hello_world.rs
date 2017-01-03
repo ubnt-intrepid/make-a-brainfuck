@@ -8,13 +8,9 @@ fn main() {
      >>+[<]<-]>  >.>---.+++  ++++..+++.  >>.<-.<.++
      +.------.-  -------.>>  +.>++.";
 
-  let mut stdout = Vec::new();
-  let ret = {
-    let mut engine = Interpreter::default().stdout(&mut stdout);
-    engine.eval(HELLO_WORLD)
-  };
-  match ret {
-    Ok(()) => println!("Success:\n\"{}\"", String::from_utf8_lossy(&stdout)),
+  let mut i = Interpreter::default();
+  match i.eval(HELLO_WORLD) {
+    Ok(()) => println!("Success:\n\"{}\"", String::from_utf8_lossy(i.stdout())),
     Err(err) => println!("Failure: {}", err),
   }
 }
