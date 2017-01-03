@@ -44,9 +44,7 @@ impl<'i, 'o> Engine<'i, 'o> {
     use parser::Ast;
     match *token {
       Ast::AddPtr(n) => Ok(self.tape.add_ptr(n)),
-      Ast::SubPtr(n) => Ok(self.tape.sub_ptr(n)),
       Ast::AddVal(n) => Ok(self.tape.add_val(n)),
-      Ast::SubVal(n) => Ok(self.tape.sub_val(n)),
       Ast::PutChar => {
         let c = self.tape.get_char();
         self.put_char(c)?;

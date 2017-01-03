@@ -12,20 +12,12 @@ impl Tape {
     }
   }
 
-  pub fn add_ptr(&mut self, n: usize) {
-    self.pointer = self.pointer.wrapping_add(n);
+  pub fn add_ptr(&mut self, n: isize) {
+    self.pointer = (self.pointer as isize).wrapping_add(n) as usize;
   }
 
-  pub fn sub_ptr(&mut self, n: usize) {
-    self.pointer = self.pointer.wrapping_sub(n);
-  }
-
-  pub fn add_val(&mut self, n: usize) {
-    safe_add(&mut self.buffer[self.pointer], n);
-  }
-
-  pub fn sub_val(&mut self, n: usize) {
-    safe_sub(&mut self.buffer[self.pointer], n);
+  pub fn add_val(&mut self, n: isize) {
+    self.buffer[self.pointer] = (self.buffer[self.pointer] as isize).wrapping_add(n) as u8;
   }
 
   pub fn get_char(&self) -> u8 {
@@ -41,12 +33,4 @@ impl Default for Tape {
   fn default() -> Tape {
     Tape::new(0, vec![0u8; 8096])
   }
-}
-
-fn safe_add(val: &mut u8, n: usize) {
-  *val = (*val as usize).wrapping_add(n) as u8;
-}
-
-fn safe_sub(val: &mut u8, n: usize) {
-  *val = (*val as usize).wrapping_sub(n) as u8;
 }

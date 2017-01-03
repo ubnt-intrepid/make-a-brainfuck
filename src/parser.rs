@@ -3,19 +3,17 @@ mod phase1 {
 
   #[derive(Debug,PartialEq)]
   pub enum Token {
-    AddVal(usize),
-    SubVal(usize),
-    AddPtr(usize),
-    SubPtr(usize),
+    AddVal(isize),
+    AddPtr(isize),
     PutChar,
     GetChar,
     JumpForward,
     JumpBackward,
   }
 
-  fn parse_to_int(s: &mut String) -> Result<usize, String> {
+  fn parse_to_int(s: &mut String) -> Result<isize, String> {
     let cnt = if s != "" {
-      s.parse::<usize>().ok().ok_or("failed to parse integer".to_owned())?
+      s.parse::<isize>().ok().ok_or("failed to parse integer".to_owned())?
     } else {
       1
     };
@@ -44,9 +42,9 @@ mod phase1 {
       match c {
         c @ '0'...'9' => buf_count.push(c),
         '>' => result.push(Token::AddPtr(parse_to_int(&mut buf_count)?)),
-        '<' => result.push(Token::SubPtr(parse_to_int(&mut buf_count)?)),
+        '<' => result.push(Token::AddPtr(-parse_to_int(&mut buf_count)?)),
         '+' => result.push(Token::AddVal(parse_to_int(&mut buf_count)?)),
-        '-' => result.push(Token::SubVal(parse_to_int(&mut buf_count)?)),
+        '-' => result.push(Token::AddVal(-parse_to_int(&mut buf_count)?)),
         '.' => result.push(Token::PutChar),
         ',' => result.push(Token::GetChar),
         '[' => result.push(Token::JumpForward),
@@ -69,7 +67,7 @@ mod phase1 {
                        Token::AddPtr(1),
                        Token::GetChar,
                        Token::PutChar,
-                       Token::SubPtr(2),
+                       Token::AddPtr(-2),
                        Token::JumpBackward]));
   }
 }
@@ -79,10 +77,8 @@ mod phase2 {
 
   #[derive(Debug,PartialEq)]
   pub enum Ast {
-    AddVal(usize),
-    SubVal(usize),
-    AddPtr(usize),
-    SubPtr(usize),
+    AddVal(isize),
+    AddPtr(isize),
     PutChar,
     GetChar,
     Loop(Vec<Ast>),
@@ -94,9 +90,7 @@ mod phase2 {
     while let Some(ref t) = tokens.get(index) {
       match **t {
         Token::AddVal(n) => result.push(Ast::AddVal(n)),
-        Token::SubVal(n) => result.push(Ast::SubVal(n)),
         Token::AddPtr(n) => result.push(Ast::AddPtr(n)),
-        Token::SubPtr(n) => result.push(Ast::SubPtr(n)),
         Token::PutChar => result.push(Ast::PutChar),
         Token::GetChar => result.push(Ast::GetChar),
         Token::JumpForward => {
