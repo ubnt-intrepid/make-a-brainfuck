@@ -37,7 +37,9 @@ fn tokenize(s: &str) -> Result<Vec<Token>, String> {
         buf_count.clear();
         result.push(Token::SymWithOffset(c, n))
       }
-      '.' | ',' | '[' | ']' | '?' => result.push(Token::Symbol(c)),
+      '.' | ',' | '[' | ']' | '?' => {
+        result.push(Token::Symbol(c));
+      }
       _ => (),
     }
   }
@@ -78,7 +80,9 @@ fn build_ast(tokens: &[Token]) -> Result<Vec<Ast>, String> {
         index = cursor + 1;
         continue;
       }
-      Token::Symbol(']') => return Err("unexpected ']' is found".to_owned()),
+      Token::Symbol(']') => {
+        return Err("unexpected ']' is found".to_owned());
+      }
       _ => unreachable!(),
     }
     index += 1;
@@ -88,7 +92,7 @@ fn build_ast(tokens: &[Token]) -> Result<Vec<Ast>, String> {
 
 
 pub fn parse(s: &str) -> Result<Vec<Ast>, String> {
-  build_ast(&tokenize(s)?)
+  tokenize(s).and_then(|s| build_ast(&s))
 }
 
 

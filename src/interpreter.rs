@@ -83,7 +83,7 @@ impl<'i> Interpreter<'i> {
   }
 
   pub fn eval(&mut self, s: &str) -> Result<(), String> {
-    self.eval_lines(&parse(s)?)
+    parse(s).and_then(|s| self.eval_lines(&s))
   }
 
   fn eval_lines(&mut self, tokens: &[Ast]) -> Result<(), String> {
