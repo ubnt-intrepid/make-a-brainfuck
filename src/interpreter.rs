@@ -1,6 +1,6 @@
 use std::io::Cursor;
 use std::io::Read;
-use parser;
+use parser::{Ast, parse};
 
 
 #[derive(Debug)]
@@ -40,21 +40,19 @@ impl Tape {
   }
 
   pub fn coredump(&self) {
-    let view: &[u8] = self.buffer
-      .iter()
-      .position(|&s| s != 0)
-      .map(|beg| {
-        let end = self.buffer
-          .iter()
-          .skip(beg)
-          .position(|&s| s == 0)
-          .map(|end| beg + end)
-          .unwrap_or(self.buffer.len());
-        &self.buffer[0..end]
-      })
-      .unwrap_or(&[]);
+    let end = {
+      let beg = self.buffer.iter().position(|&s| s != 0);
+      if let Some(beg) = beg {
+        let end = self.buffer.iter().skip(beg).position(|&s| s == 0);
+        end.map(|end| beg + end).unwrap_or(self.buffer.len())
+      } else {
+        0
+      }
+    };
 
-    println!("[coredump] ptr = {}, buffer = {:?}", self.pointer, view);
+    println!("[coredump] ptr = {}, buffer = {:?}",
+             self.pointer,
+             &self.buffer[0..end]);
   }
 }
 
@@ -85,42 +83,42 @@ impl<'i> Interpreter<'i> {
   }
 
   pub fn eval(&mut self, s: &str) -> Result<(), String> {
-    self.eval_lines(&parser::parse(s)?)
+    self.eval_lines(&parse(s)?)
   }
 
-  fn eval_lines(&mut self, tokens: &[parser::Ast]) -> Result<(), String> {
+  fn eval_lines(&mut self, tokens: &[Ast]) -> Result<(), String> {
     for token in tokens {
       self.eval_token(token)?;
     }
     Ok(())
   }
 
-  fn eval_token(&mut self, token: &parser::Ast) -> Result<(), String> {
-    use parser::Ast;
+  fn eval_token(&mut self, token: &Ast) -> Result<(), String> {
     match *token {
-      Ast::AddPtr(n) => Ok(self.tape.add_ptr(n)),
-      Ast::AddVal(n) => Ok(self.tape.add_val(n)),
+      Ast::AddPtr(n) => {
+        self.tape.add_ptr(n);
+      }
+      Ast::AddVal(n) => {
+        self.tape.add_val(n);
+      }
       Ast::PutChar => {
         let c = self.tape.get_char();
         self.put_char(c)?;
-        Ok(())
       }
       Ast::GetChar => {
         let c = self.get_char()?;
         self.tape.put_char(c);
-        Ok(())
       }
       Ast::CoreDump => {
         self.tape.coredump();
-        Ok(())
       }
       Ast::Loop(ref ast) => {
         while self.tape.get_char() != 0 {
           self.eval_lines(&ast)?;
         }
-        Ok(())
       }
     }
+    Ok(())
   }
 
   fn put_char(&mut self, c: u8) -> Result<(), String> {
