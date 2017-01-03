@@ -1,9 +1,7 @@
 mod parser;
-mod tape;
-mod engine;
+mod interpreter;
 #[cfg(test)]
 mod tests;
 
-pub use engine::Engine;
-pub use tape::Tape;
+pub use interpreter::Interpreter;
 pub use parser::parse;

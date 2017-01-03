@@ -1,11 +1,9 @@
-use engine::Engine;
-use tape::Tape;
+use interpreter::Interpreter;
 
 #[test]
 fn test1() {
-  let tape = Tape::new(0, vec![72, 111, 103, 101, 10, 70, 111, 111, 0]);
   let mut stdout = Vec::new();
-  assert!(Engine::new(tape)
+  assert!(Interpreter::new(0, vec![72, 111, 103, 101, 10, 70, 111, 111, 0])
     .stdout(&mut stdout)
     .eval("[.>]")
     .is_ok());
@@ -37,7 +35,7 @@ fn test2() {
   "#;
 
   let mut stdout = Vec::new();
-  assert!(Engine::default().stdout(&mut stdout).eval(SOURCE).is_ok());
+  assert!(Interpreter::default().stdout(&mut stdout).eval(SOURCE).is_ok());
   assert_eq!(stdout, "7".as_bytes());
 }
 
@@ -54,7 +52,7 @@ fn test3() {
   "#;
 
   let mut stdout = Vec::new();
-  assert!(Engine::default().stdout(&mut stdout).eval(SOURCE).is_ok());
+  assert!(Interpreter::default().stdout(&mut stdout).eval(SOURCE).is_ok());
   assert_eq!(stdout, "7".as_bytes());
 }
 
@@ -66,7 +64,7 @@ fn hello_world() {
        +.------.--------.>>+.>++.";
 
   let mut stdout = Vec::new();
-  assert!(Engine::default().stdout(&mut stdout).eval(SOURCE).is_ok());
+  assert!(Interpreter::default().stdout(&mut stdout).eval(SOURCE).is_ok());
   assert_eq!(stdout, "Hello World!\n".as_bytes());
 }
 
@@ -100,7 +98,7 @@ fn hello_world2() {
   "#;
 
   let mut stdout = Vec::new();
-  assert!(Engine::default().stdout(&mut stdout).eval(SOURCE).is_ok());
+  assert!(Interpreter::default().stdout(&mut stdout).eval(SOURCE).is_ok());
   assert_eq!(stdout, "Hello World!\n".as_bytes());
 }
 
@@ -114,7 +112,7 @@ fn fizz_buzz() {
        <<<<<[->>+>+>-<<<<]<]>>[[-]<]>[>>>[>.<<.<<<]<[.<<<<]>]>.<<<<<<<<<<<]";
 
   let mut stdout = Vec::new();
-  assert!(Engine::default().stdout(&mut stdout).eval(SOURCE).is_ok());
+  assert!(Interpreter::default().stdout(&mut stdout).eval(SOURCE).is_ok());
   for (i, r) in String::from_utf8_lossy(&stdout[..(stdout.len() - 1)])
     .split("\n")
     .enumerate() {
@@ -141,7 +139,7 @@ fn fizz_buzz2() {
        >]>.11<]";
 
   let mut stdout = Vec::new();
-  assert!(Engine::default().stdout(&mut stdout).eval(SOURCE).is_ok());
+  assert!(Interpreter::default().stdout(&mut stdout).eval(SOURCE).is_ok());
   for (i, r) in String::from_utf8_lossy(&stdout[..(stdout.len() - 1)])
     .split("\n")
     .enumerate() {
@@ -168,7 +166,7 @@ fn primes() {
        .<.>-.-----.<.>+++++.+.<.>.--.";
 
   let mut stdout = Vec::new();
-  assert!(Engine::default().stdout(&mut stdout).eval(SOURCE).is_ok());
+  assert!(Interpreter::default().stdout(&mut stdout).eval(SOURCE).is_ok());
 
   assert_eq!(stdout,
              "2 3 5 7 11 13 17 19 23 29 31 37 41 32 36 42 48 50 56 60 62 68 72 78 86".as_bytes());
