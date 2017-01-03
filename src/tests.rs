@@ -75,35 +75,28 @@ fn hello_world2() {
   #[cfg_attr(rustfmt, rustfmt_skip)]
   const SOURCE: &'static str = r#"
   8+                    # v[0] += 8;
-  [                     # while v[ptr] != 0 {
-    >4+                 #   v[++ptr] += 4;
-    [                   #   while v[ptr] != 0 {
-      >2+               #     v[++ptr] += 2;
-      >3+               #     v[++ptr] += 3;
-      >3+               #     v[++ptr] += 3;
-      >+                #     v[++ptr] += 1;
-      4<-               #     ptr -= 4; v[ptr] -= 1;
-    ]                   #   }
-    >+                  #   v[++ptr] += 1;
-    >+                  #   v[++ptr] += 1;
-    >-                  #   v[++ptr] -= 1;
-    2>+                 #   ptr += 2; v[ptr] += 1;
-    [<]                 #   while v[ptr] != 0 { ptr--; }
-    <-                  #   v[--ptr] -= 1;
+  [                     # while v[0] != 0 {
+    >                   #   ptr = 1;
+    4+[>2+>3+>3+>+4<-]  #   v[2,3,4,5] += 4*[2,3,3,1]; v[1] = 0;
+    >+                  #   v[2] += 1;
+    >+                  #   v[3] += 1;
+    >-                  #   v[4] -= 1;
+    2>+                 #   v[6] += 1;
+    [<]<-               #   ptr = 0; v[0] -= 1;
   ]                     # }
-                        # // ptr = ??; v = [??];
-  2>.                   # ptr += 2; putchar(v[ptr]);                    // 'H'
-  >3-.                  # ++ptr; v[ptr] -= 3; putchar(v[ptr]);          // 'e'
-  7+..                  # v[ptr] += 7; putchar(v[ptr]); putchar(v[ptr]) // 'l', 'l'
-  3+.                   # v[ptr] += 3; putchar(v[ptr]);                 // 'o'
-  2>.                   # ptr += 2; putchar(v[ptr]);                    // ' '
-  <-.                   # --ptr; v[ptr] -= 1; putchar(v[ptr]);          // 'W'
-  <.                    # --ptr; putchar(v[ptr]);                       // 'o'
-  3+.                   # v[ptr] += 3; putchar(v[ptr]);                 // 'r'
-  6-.                   # v[ptr] -= 6; putchar(v[ptr]);                 // 'l'
-  8-.                   # v[ptr] -= 8; putchar(v[ptr]);                 // 'd'
-  2>+.                  # ptr += 2; v[ptr] += 1; putchar(v[ptr]);       // '!'
-  >2+.                  # ptr++; v[ptr] += 2; putchar(v[ptr]);          // '\n'
+  ?                     # // ptr = 0, v = [0, 0, 'H', 'h', 'X', ' ', 0x08]
+  2>.                   #            putchar(v[2]);
+  >3-.                  # v[3] -= 3; putchar(v[3]);
+  7+..                  # v[3] += 7; putchar(v[3]); putchar(v[3]);
+  3+.                   # v[3] += 3; putchar(v[3]);
+  2>.                   #            putchar(v[5]);
+  <-.                   # v[4] -= 1; putchar(v[4]);
+  <.                    #            putchar(v[3]);
+  3+.                   # v[3] += 3; putchar(v[3]);
+  6-.                   # v[3] -= 6; putchar(v[3]);
+  8-.                   # v[3] -= 8; putchar(v[3]);
+  2>+.                  # v[5] += 1; putchar(v[5]);
+  >2+.                  # v[6] += 2; putchar(v[6]);
   "#;
 
   let mut stdout = Vec::new();

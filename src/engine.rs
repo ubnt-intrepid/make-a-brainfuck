@@ -55,6 +55,10 @@ impl<'i, 'o> Engine<'i, 'o> {
         self.tape.put_char(c);
         Ok(())
       }
+      Ast::CoreDump => {
+        self.tape.coredump();
+        Ok(())
+      }
       Ast::Loop(ref ast) => {
         while self.tape.get_char() != 0 {
           self.eval_lines(&ast)?;

@@ -9,6 +9,7 @@ mod phase1 {
     GetChar,
     JumpForward,
     JumpBackward,
+    CoreDump,
   }
 
   fn parse_to_int(s: &mut String) -> Result<isize, String> {
@@ -36,7 +37,7 @@ mod phase1 {
       .split("\n")
       .map(|line| remove_comments.replace(line, ""))
       .flat_map(|s| s.chars().collect::<Vec<_>>())
-      .filter(|&c| "><+-.,[]0123456789".contains(c));
+      .filter(|&c| "><+-.,[]?0123456789".contains(c));
 
     for c in inputs {
       match c {
@@ -49,6 +50,7 @@ mod phase1 {
         ',' => result.push(Token::GetChar),
         '[' => result.push(Token::JumpForward),
         ']' => result.push(Token::JumpBackward),
+        '?' => result.push(Token::CoreDump),
         _ => unreachable!(),
       }
     }
@@ -81,6 +83,7 @@ mod phase2 {
     AddPtr(isize),
     PutChar,
     GetChar,
+    CoreDump,
     Loop(Vec<Ast>),
   }
 
@@ -93,6 +96,7 @@ mod phase2 {
         Token::AddPtr(n) => result.push(Ast::AddPtr(n)),
         Token::PutChar => result.push(Ast::PutChar),
         Token::GetChar => result.push(Ast::GetChar),
+        Token::CoreDump => result.push(Ast::CoreDump),
         Token::JumpForward => {
           let mut nest = 1;
           let cursor = ((index + 1)..(tokens.len())).find(|&j| {
