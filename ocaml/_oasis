@@ -12,4 +12,4 @@ Executable "brainfuck"
   Path:           src
   MainIs:         main.ml
   CompiledObject: native
-  BuildDepends:   ppx_deriving, ppx_deriving.show
+  BuildDepends:   batteries, ppx_deriving, ppx_deriving.show
