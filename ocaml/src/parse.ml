@@ -1,7 +1,5 @@
 module B = Batteries
 
-let unreachable = failwith "unreachable code."
-
 
 type token =
   | Symbol of char
@@ -11,8 +9,8 @@ let tokenize (source: string) : token list =
   let open Angstrom in
 
   let to_int s =
-    let s = String.trim s in
-    if s != "" then int_of_string s else 1
+    try int_of_string (String.trim s)
+    with _ -> 1
   in
 
   let is_digit = function
@@ -69,27 +67,32 @@ let tokenize (source: string) : token list =
 let build_ast tokens =
   let module Local = struct
     type progress =
-      | Continue of int * int
+      | Continue of continue_t
       | Done of int
+    and
+      continue_t = { count: int; nest: int }
 
-    let _find_paren progress token =
-      match progress with
-      | Done p -> Done p
-      | Continue (count, nest) ->
-        begin
-          match token with
-          | Symbol '[' -> Continue (count + 1, nest + 1)
-          | Symbol ']' ->
-            if nest - 1 = 0 then Done count
-            else Continue (count + 1, nest - 1)
-          | _ -> Continue (count + 1, nest)
-        end
+    (* state function *)
+    let update_progress p token =
+      match (p, token) with
+      (* add nest *)
+      | (Continue {count; nest}, Symbol '[') -> Continue {count=count+1; nest=nest+1}
+      (* found unmatched rparen *)
+      | (Continue {count; nest}, Symbol ']') when nest > 1 -> Continue {count=count+1; nest=nest-1}
+      (* found matched rparen *)
+      | (Continue {count; nest}, Symbol ']') when nest = 1 -> Done count
+      (* not paren *)
+      | (Continue {count; nest}, _) -> Continue {count=count+1; nest}
+      (* done *)
+      | (Done count, _) -> Done count
 
-    let find_rparen tokens =
-      let result = List.fold_left _find_paren (Continue (0, 1)) tokens in
+
+    let find_rparen_position tokens =
+      let result = List.fold_left update_progress (Continue {count=0; nest=1}) tokens in
       match result with
-      | Done cursor -> cursor
-      | Continue _ -> failwith "incorrect nest"
+      | Done cursor -> Some cursor
+      | Continue _ -> None
+
   end in
 
   let rec _body result tokens =
@@ -106,7 +109,10 @@ let build_ast tokens =
         | SymbolWithOffset ('<', n) -> (Ast.AddPtr (-n), 0)
         | Symbol ']' -> failwith "unexpected ']' is found"
         | Symbol '[' ->
-          let n = Local.find_rparen tail in
+          let n = match Local.find_rparen_position tail with
+            | Some n -> n
+            | None -> failwith "incorrect nest"
+          in
           let stmt = _body [] (B.List.take n tail) in
           (Ast.Loop stmt, (n + 1))
         | _ -> failwith "Unreachable"
