@@ -1,0 +1,15 @@
+OASISFormat:  0.4
+OCamlVersion: >= 4.02.1
+Name:         brainfuck
+Version:      0.0.1
+Synopsis:     my implementation of brainfuck interpreter.
+Authors:      Yusuke Sasaki <yusukes.sasaki.nuem@gmail.com>
+License:      MIT
+Plugins:      META (0.4), DevFiles (0.4)
+BuildTools:   ocamlbuild
+
+Executable "brainfuck"
+  Path:           src
+  MainIs:         main.ml
+  CompiledObject: native
+  BuildDepends:   ppx_deriving, ppx_deriving.show
