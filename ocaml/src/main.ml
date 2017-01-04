@@ -1,4 +1,3 @@
 let () =
   let i = new Brainfuck.interpreter in
-  i#eval "++>+++++[<+>-]++++++++[<++++++>-]<."
-
+  i#eval "++>5+[<+>-]++++++++[<++++++>-]<."
