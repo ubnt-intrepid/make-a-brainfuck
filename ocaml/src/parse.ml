@@ -1,90 +1,119 @@
-open Ast
-open Angstrom
+module B = Batteries
+
+let unreachable = failwith "unreachable code."
 
 
 type token =
   | Symbol of char
   | SymbolWithOffset of char * int
-[@@deriving show]
 
+let tokenize (source: string) : token list =
+  let open Angstrom in
 
-let tokenize (source:string) : token list =
+  let to_int s =
+    let s = String.trim s in
+    if s != "" then int_of_string s else 1
+  in
+
+  let is_digit = function
+    | '0'..'9' -> true
+    | _ -> false
+  in
+
+  let is_symbol =
+    String.contains ".,[]?"
+  in
+  let is_symbol_with_offset =
+    String.contains "+-><"
+  in
+
+  let to_symbol c = Symbol c in
+  let to_symbol_with_offset (o,c) = SymbolWithOffset (c,o) in
+
+  (* supplemental parsers *)
+  let (<!>) a b = lift2 (fun a b -> (a,b)) a b in
+  let digits = take_while is_digit >>| to_int in
+
+  let symbol =
+    satisfy is_symbol >>| to_symbol
+  in
+
+  let symbol_with_offset =
+    digits <!> (satisfy is_symbol_with_offset) >>| to_symbol_with_offset
+  in
+
+  let parser =
+    many (symbol <|> symbol_with_offset)
+  in
+
   let remove_comment line =
     try String.sub line 0 (String.index line '#')
     with _ -> line
   in
-  let parser =
-    let symbol =
-      satisfy (String.contains ".,[]?") >>| (fun c -> Symbol c)
-    in
-    let symbol_with_offset =
-      let digits =
-        take_while (fun c -> c >= '0' && c <= '9')
-        >>| (fun d -> if d = "" then 1 else int_of_string d)
-      in
-      let symbol = satisfy (String.contains "+-><") in
-      lift2 (fun d s -> (d, s)) digits symbol
-      >>| (fun (offset, symbol) -> SymbolWithOffset (symbol, offset))
-    in
-    Angstrom.many (symbol <|> symbol_with_offset)
-  in
+
+  (* primitive operators and functions *)
   let (>>) g f x = f (g x) in
-  source
-  |> Str.split (Str.regexp "\n")
-  |> Batteries.List.map (remove_comment >> Batteries.String.to_list)
-  |> List.flatten
-  |> Batteries.String.of_list
-  |> (fun s -> parse_only parser (`String s))
-  |> (fun v -> match v with
-      | Result.Ok v -> v
-      | Result.Error msg -> failwith msg)
+  let flat_map f = List.map f >> List.flatten in
+
+  let source =
+    Str.split (Str.regexp "\n") source
+    |> flat_map (remove_comment >> B.String.to_list)
+    |> B.String.of_list
+  in
+
+  match parse_only parser (`String source) with
+  | Result.Ok v -> v
+  | Result.Error msg -> failwith msg
 
 
-type progress =
-  | InNest of int * int
-  | Done of int
+let build_ast tokens =
+  let module Local = struct
+    type progress =
+      | Continue of int * int
+      | Done of int
 
-let rec _build_ast result tokens =
-  match tokens with
-  | [] -> result
-  | head :: tail ->
-    let (command, offset) = match head with
-      | Symbol '.' -> (PutChar, 0)
-      | Symbol ',' -> (GetChar, 0)
-      | Symbol '?' -> (CoreDump, 0)
-      | SymbolWithOffset ('+', n) -> (AddVal n, 0)
-      | SymbolWithOffset ('-', n) -> (AddVal (-n), 0)
-      | SymbolWithOffset ('>', n) -> (AddPtr n, 0)
-      | SymbolWithOffset ('<', n) -> (AddPtr (-n), 0)
-      | Symbol ']' -> failwith "unexpected ']' is found"
-      | Symbol '[' ->
+    let _find_paren progress token =
+      match progress with
+      | Done p -> Done p
+      | Continue (count, nest) ->
         begin
-          let find_paren progress token =
-            match progress with
-            | Done p -> Done p
-            | InNest (count, nest) ->
-              begin match token with
-                | Symbol '[' ->
-                  InNest (count + 1, nest + 1)
-                | Symbol ']' ->
-                  if nest - 1 = 0 then Done count
-                  else InNest (count + 1, nest - 1)
-                | _ ->
-                  InNest (count + 1, nest)
-              end
-          in
-          let cursor = tail |> List.fold_left find_paren (InNest (0, 1)) in
-          match cursor with
-          | Done cursor ->
-            let stmt = _build_ast [] (tail |> Batteries.List.take cursor) in
-            (Loop stmt, (cursor + 1))
-          | _ -> failwith "incorrect nest"
+          match token with
+          | Symbol '[' -> Continue (count + 1, nest + 1)
+          | Symbol ']' ->
+            if nest - 1 = 0 then Done count
+            else Continue (count + 1, nest - 1)
+          | _ -> Continue (count + 1, nest)
         end
-      | _ -> failwith "Unreachable"
-    in
-    _build_ast (List.append result [command]) (tail |> Batteries.List.drop offset)
 
-let build_ast tokens = _build_ast [] tokens
+    let find_rparen tokens =
+      let result = List.fold_left _find_paren (Continue (0, 1)) tokens in
+      match result with
+      | Done cursor -> cursor
+      | Continue _ -> failwith "incorrect nest"
+  end in
+
+  let rec _body result tokens =
+    match tokens with
+    | [] -> result
+    | head :: tail ->
+      let (command, offset) = match head with
+        | Symbol '.' -> (Ast.PutChar, 0)
+        | Symbol ',' -> (Ast.GetChar, 0)
+        | Symbol '?' -> (Ast.CoreDump, 0)
+        | SymbolWithOffset ('+', n) -> (Ast.AddVal n, 0)
+        | SymbolWithOffset ('-', n) -> (Ast.AddVal (-n), 0)
+        | SymbolWithOffset ('>', n) -> (Ast.AddPtr n, 0)
+        | SymbolWithOffset ('<', n) -> (Ast.AddPtr (-n), 0)
+        | Symbol ']' -> failwith "unexpected ']' is found"
+        | Symbol '[' ->
+          let n = Local.find_rparen tail in
+          let stmt = _body [] (B.List.take n tail) in
+          (Ast.Loop stmt, (n + 1))
+        | _ -> failwith "Unreachable"
+      in
+      _body (List.append result [command]) (tail |> B.List.drop offset)
+  in
+  _body [] tokens
 
 
 let parse source = source |> tokenize |> build_ast
