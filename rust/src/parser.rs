@@ -64,21 +64,16 @@ fn build_ast(tokens: &[Token]) -> Result<Vec<Ast>, String> {
         let mut nest = 1;
         let cursor = ((index + 1)..(tokens.len())).find(|&j| {
             match tokens[j] {
-              Token::Symbol('[') => {
-                nest += 1;
-                false
-              }
-              Token::Symbol(']') => {
-                nest -= 1;
-                nest == 0
-              }
-              _ => false,
+              Token::Symbol('[') => nest += 1,
+              Token::Symbol(']') => nest -= 1,
+              _ => (),
             }
+            nest == 0
           })
           .ok_or("nest error".to_owned())?;
-        result.push(Ast::Loop(build_ast(&tokens[(index + 1)..cursor])?));
-        index = cursor + 1;
-        continue;
+        let stmt = build_ast(&tokens[(index + 1)..cursor])?;
+        result.push(Ast::Loop(stmt));
+        index = cursor;
       }
       Token::Symbol(']') => {
         return Err("unexpected ']' is found".to_owned());
